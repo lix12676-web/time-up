@@ -24,7 +24,9 @@
   }
   main{max-width:880px;margin:0 auto;padding:16px 14px 40px;}
 
-  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+  /* 顶部钉住：滚动或键盘顶起时，时钟和四个标签一直留在最上面 */
+  .topbar{position:sticky;top:0;z-index:20;background:var(--bg);margin:-4px -14px 6px;padding:6px 14px 6px;}
   .clock{font-size:13.5px;color:var(--ink3);font-variant-numeric:tabular-nums;line-height:1.6;}
   .clock b{color:var(--ink2);font-weight:600;}
   .ver{font-size:11.5px;color:#aab2bd;letter-spacing:.04em;border:1px solid var(--line);border-radius:99px;padding:1px 8px;background:#fff;}
@@ -180,9 +182,10 @@
 </head>
 <body>
 <main>
+  <div class="topbar">
   <div class="head">
     <div class="clock" id="clock"></div>
-    <div class="ver">v2.1.0</div>
+    <div class="ver">v2.1.1</div>
   </div>
 
   <div class="tabs" id="tabs">
@@ -190,6 +193,7 @@
     <button class="tab" data-tab="count">倒计时<span class="n" id="n-count">0</span></button>
     <button class="tab" data-tab="todo">待办<span class="n" id="n-todo">0</span></button>
     <button class="tool" id="ioBtn" type="button">备份</button>
+  </div>
   </div>
 
   <div class="io-panel" id="ioPanel" style="display:none;">
