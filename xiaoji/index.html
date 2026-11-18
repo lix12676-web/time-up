@@ -159,7 +159,7 @@
 <main>
   <div class="head">
     <div class="clock" id="clock"></div>
-    <div class="ver">v2.0.4</div>
+    <div class="ver">v2.0.5</div>
   </div>
 
   <div class="tabs" id="tabs">
@@ -443,11 +443,32 @@
   var sheetInputs = [];
   var sheetCb = null;
 
+  // 弹层打开时锁住背景页滚动：键盘弹出不会把整页往上顶，顶部标签不会被顶出屏幕
+  var scrollLockY = 0, bodyLocked = false;
+  function lockBody(){
+    if(bodyLocked) return;
+    scrollLockY = window.scrollY || window.pageYOffset || 0;
+    var b = document.body.style;
+    b.position = 'fixed';
+    b.top = -scrollLockY + 'px';
+    b.left = '0'; b.right = '0'; b.width = '100%';
+    b.overflow = 'hidden';
+    bodyLocked = true;
+  }
+  function unlockBody(){
+    if(!bodyLocked) return;
+    var b = document.body.style;
+    b.position = ''; b.top = ''; b.left = ''; b.right = ''; b.width = ''; b.overflow = '';
+    window.scrollTo(0, scrollLockY);
+    bodyLocked = false;
+  }
+
   function closeSheet(){
     sheetWrap.classList.remove('on');
     sheetBodyEl.innerHTML = '';
     sheetInputs = [];
     sheetCb = null;
+    unlockBody();
   }
 
   // opts = { title, msg, fields:[{key,label,type:'text'|'date'|'textarea',value,placeholder,rows}], okText, danger, onOk(values) }
@@ -496,6 +517,7 @@
     sheetCb = opts.onOk || null;
 
     sheetWrap.classList.add('on');
+    lockBody();
     setTimeout(function(){
       var first = sheetBodyEl.querySelector('input,textarea');
       if(first) first.focus();
