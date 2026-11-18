@@ -448,7 +448,7 @@
   }
 
   document.getElementById('exJson').onclick = function(){
-    download('三格备份-'+todayStr()+'.json', JSON.stringify(DB, null, 2));
+    download('小记备份-'+todayStr()+'.json', JSON.stringify(DB, null, 2));
   };
 
   document.getElementById('exCsv').onclick = function(){
@@ -459,7 +459,7 @@
     var csv = rows.map(function(r){
       return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(',');
     }).join('\r\n');
-    download('三格清单-'+todayStr()+'.csv', '\ufeff'+csv, 'text/csv;charset=utf-8');
+    download('小记清单-'+todayStr()+'.csv', '\ufeff'+csv, 'text/csv;charset=utf-8');
   };
 
   var fileEl = document.getElementById('imFile');
