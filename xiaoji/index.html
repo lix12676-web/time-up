@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="小记">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>小记 · 灵感 / 倒计时 / 待办</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#ffffff; --ink:#1b2027; --ink2:#5b6472; --ink3:#8b939e;
+    --line:#e6e9ee; --idea:#2b5c9e; --count:#c2410c; --todo:#146c52;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    font-size:16px;line-height:1.6;-webkit-text-size-adjust:100%;
+  }
+  main{max-width:880px;margin:0 auto;padding:16px 14px 40px;}
+
+  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .clock{font-size:13.5px;color:var(--ink3);font-variant-numeric:tabular-nums;line-height:1.6;}
+  .clock b{color:var(--ink2);font-weight:600;}
+  .ver{font-size:11.5px;color:#aab2bd;letter-spacing:.04em;border:1px solid var(--line);border-radius:99px;padding:1px 8px;background:#fff;}
+
+  .tabs{display:flex;gap:4px;background:#eceef2;border-radius:14px;padding:4px;margin-bottom:10px;align-items:stretch;}
+  .tab{
+    flex:1;min-width:0;min-height:44px;border:0;background:transparent;border-radius:11px;
+    font:inherit;font-size:15px;font-weight:600;color:var(--ink2);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;
+  }
+  .tab.on{background:#fff;color:var(--ink);box-shadow:0 1px 5px rgba(20,30,45,.10);}
+  .tab .n{font-size:12px;background:#dfe3ea;color:#6b7480;border-radius:99px;padding:0 6px;line-height:1.7;font-weight:600;}
+  .tab.on .n{background:#eef3fb;color:#2b5c9e;}
+  .tool{
+    flex:0 0 auto;min-height:44px;padding:0 14px;border:0;border-radius:11px;background:transparent;
+    font:inherit;font-size:14px;font-weight:600;color:var(--ink2);cursor:pointer;white-space:nowrap;
+    display:flex;align-items:center;justify-content:center;gap:5px;
+    border-left:1px solid #dde1e8;
+  }
+  .tool.on{background:#fff;color:var(--ink);box-shadow:0 1px 5px rgba(20,30,45,.10);border-left-color:transparent;}
+
+  .io-panel{background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:12px;box-shadow:0 2px 10px rgba(20,30,45,.06);}
+
+  .add{background:#fff;border-radius:16px;padding:12px;box-shadow:0 2px 10px rgba(20,30,45,.06);margin-bottom:14px;}
+  .add-line{display:flex;gap:8px;align-items:flex-start;}
+  textarea,input[type=text]{
+    flex:1;min-width:0;font:inherit;font-size:16px;padding:10px 12px;border-radius:11px;
+    border:1px solid var(--line);background:#fbfcfd;color:inherit;line-height:1.5;resize:none;
+  }
+  textarea{min-height:46px;}
+  textarea:focus,input:focus{outline:none;border-color:#a8b0bb;background:#fff;}
+  .add-go{flex:0 0 auto;min-height:46px;padding:0 16px;border-radius:11px;border:1px solid var(--ink);background:var(--ink);color:#fff;font:inherit;font-size:15px;cursor:pointer;}
+  .add-sub{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center;}
+  input[type=date]{font:inherit;font-size:14.5px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fbfcfd;color:inherit;min-height:42px;}
+  .hint{font-size:12.5px;color:var(--ink3);}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;}
+  .note{
+    position:relative;background:var(--card);border-radius:14px;padding:13px 13px 11px 15px;
+    box-shadow:0 2px 10px rgba(20,30,45,.06);overflow:hidden;
+    display:flex;flex-direction:column;min-height:100px;
+  }
+  .note::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,var(--idea));}
+  .note.idea{--c:var(--idea);}
+  .note.count{--c:var(--count);}
+  .note.todo{--c:var(--todo);}
+  .note.past{--c:#aab2bd;}
+
+  .note-txt{font-size:15.5px;line-height:1.55;font-weight:500;word-break:break-word;white-space:pre-wrap;flex:1;}
+  .note-txt.done{color:#a3abb6;text-decoration:line-through;font-weight:400;}
+  .note-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:9px;font-size:12.5px;color:var(--ink3);}
+  .acts{display:flex;gap:2px;margin:-6px -8px -6px 0;}
+  .acts button{
+    width:36px;height:36px;border:0;background:transparent;color:#c0c7d1;font-size:15px;
+    line-height:1;cursor:pointer;border-radius:9px;padding:0;
+  }
+  .acts button:active{background:#f0f2f6;}
+
+  .cd-num{display:flex;align-items:baseline;gap:5px;margin:6px 0 0;}
+  .cd-num span.big{font-size:32px;font-weight:700;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--count);}
+  .cd-num span.u{font-size:14px;color:var(--ink2);}
+  .cd-num.over span.big{color:#aab2bd;}
+  .bar{height:6px;border-radius:99px;background:#eceff4;margin:10px 0 0;overflow:hidden;}
+  .bar i{display:block;height:6px;border-radius:99px;background:var(--count);}
+  .note.past .bar i{background:#c7ccd4;}
+
+  .empty{grid-column:1/-1;background:#fff;border-radius:14px;padding:22px 16px;text-align:center;color:var(--ink3);font-size:14.5px;box-shadow:0 2px 10px rgba(20,30,45,.05);}
+
+  details{background:#fff;border-radius:14px;padding:12px 14px;margin-top:18px;box-shadow:0 2px 10px rgba(20,30,45,.05);}
+  summary{font-size:14.5px;font-weight:600;cursor:pointer;color:var(--ink2);}
+  .io{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .io button{font:inherit;font-size:14px;min-height:42px;padding:0 14px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:11px;cursor:pointer;}
+  .tip{font-size:12.5px;color:var(--ink3);line-height:1.75;margin-top:9px;}
+  footer{font-size:12px;color:#aab2bd;line-height:1.8;margin-top:18px;text-align:center;}
+
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#0f1216;--card:#181c22;--ink:#e9edf2;--ink2:#c2c9d2;--ink3:#8b939e;--line:#2a313a;}
+    .tabs{background:#1b2027;}
+    .tab.on{background:#2a313a;color:#fff;}
+    .add,.io-panel{background:var(--card);}
+    textarea,input[type=text],input[type=date]{background:#20252d;border-color:#2a313a;}
+    .ver{background:#181c22;}
+    .empty{background:#181c22;}
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="head">
+    <div class="clock" id="clock"></div>
+    <div class="ver">v2.0.2</div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-tab="idea">灵感<span class="n" id="n-idea">0</span></button>
+    <button class="tab" data-tab="count">倒计时<span class="n" id="n-count">0</span></button>
+    <button class="tab" data-tab="todo">待办<span class="n" id="n-todo">0</span></button>
+    <button class="tool" id="ioBtn" type="button">备份</button>
+  </div>
+
+  <div class="io-panel" id="ioPanel" style="display:none;">
+    <div class="io" style="margin-top:0;">
+      <button id="exJson">导出备份（JSON）</button>
+      <button id="exCsv">导出表格（CSV）</button>
+      <button id="imBtn" type="button">导入备份</button>
+      <input type="file" id="imFile" accept=".json,application/json" style="display:none">
+    </div>
+    <div class="tip">数据只存在这台设备的浏览器里，不上传。换手机前先导出，新设备再导入。清缓存、换浏览器会丢。</div>
+  </div>
+
+  <section id="panel-idea">
+    <div class="add">
+      <div class="add-line">
+        <textarea id="ideaInput" placeholder="想到什么就写下来，回车保存"></textarea>
+        <button class="add-go" id="ideaAdd">记下</button>
+      </div>
+      <div class="add-sub"><span class="hint">Shift + 回车可以换行</span></div>
+    </div>
+    <div class="grid" id="ideaList"></div>
+  </section>
+
+  <section id="panel-count" style="display:none;">
+    <div class="add">
+      <div class="add-line">
+        <input type="text" id="countTitle" placeholder="要考的事，比如 考四级" autocomplete="off">
+        <button class="add-go" id="countAdd">加上</button>
+      </div>
+      <div class="add-sub">
+        <input type="date" id="countDate">
+        <span class="hint">选日期就能自动算还剩多少天</span>
+      </div>
+    </div>
+    <div class="grid" id="countList"></div>
+  </section>
+
+  <section id="panel-todo" style="display:none;">
+    <div class="add">
+      <div class="add-line">
+        <input type="text" id="todoInput" placeholder="要做的事，比如 交作业" autocomplete="off">
+        <button class="add-go" id="todoAdd">加上</button>
+      </div>
+    </div>
+    <div class="grid" id="todoList"></div>
+  </section>
+
+  <footer>小记 · 灵感 / 倒计时 / 待办 &nbsp;·&nbsp; 数据存本地 &nbsp;·&nbsp; 版本说明见 README</footer>
+</main>
+
+<script>
+(function(){
+  'use strict';
+
+  // ═══════════ 数据层：全部存在 localStorage ═══════════
+  // key = shige.v2 ，结构见 README.md
+  var KEY = 'shige.v2';
+  var OLDKEY = 'timeup.v2';
+  var MS = 86400000;
+  var DB = { tab:'idea', ideas:[], counts:[], todos:[] };
+
+  function pad(n){ return n<10 ? '0'+n : ''+n; }
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  }
+  function dayStart(s){
+    var a = s.split('-');
+    return new Date(+a[0], +a[1]-1, +a[2]).getTime();
+  }
+  function daysBetween(a, b){ return Math.round((dayStart(b)-dayStart(a))/MS); }
+  function stamp(ts){
+    var d = new Date(ts);
+    return (d.getMonth()+1)+'月'+d.getDate()+'日 '+pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+  function esc(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      if(raw){
+        var o = JSON.parse(raw);
+        if(o && o.ideas){ DB = o; }
+      }else{
+        var old = localStorage.getItem(OLDKEY);
+        if(old){
+          var ov = JSON.parse(old);
+          if(ov && ov.todos){
+            DB.todos = ov.todos.map(function(t, i){
+              return { id: t.id || (Date.now()+i), text: t.text || '', done: !!t.done, ts: t.id || Date.now() };
+            });
+          }
+        }
+      }
+    }catch(e){}
+    if(!DB.tab) DB.tab = 'idea';
+    if(!DB.ideas) DB.ideas = [];
+    if(!DB.counts) DB.counts = [];
+    if(!DB.todos) DB.todos = [];
+  }
+  function save(){
+    try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){}
+  }
+
+  // ═══════════ 时钟 ═══════════
+  var WK = ['日','一','二','三','四','五','六'];
+  function tick(){
+    var d = new Date();
+    var el = document.getElementById('clock');
+    if(el){
+      el.innerHTML = d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+WK[d.getDay()]
+                   + ' <b>'+pad(d.getHours())+':'+pad(d.getMinutes())+'</b>';
+    }
+  }
+
+  // ═══════════ 渲染：灵感 ═══════════
+  function renderIdeas(){
+    var list = DB.ideas.slice().sort(function(a,b){ return b.ts-a.ts; });
+    var html = list.map(function(it){
+      return '<div class="note idea" data-id="'+it.id+'" data-type="idea">'
+           +   '<div class="note-txt">'+esc(it.text)+'</div>'
+           +   '<div class="note-meta"><span>'+stamp(it.ts)+'</span>'
+           +     '<span class="acts">'
+           +       '<button data-act="edit" aria-label="改">改</button>'
+           +       '<button data-act="del" aria-label="删">×</button>'
+           +     '</span></div>'
+           + '</div>';
+    }).join('');
+    document.getElementById('ideaList').innerHTML =
+      html || '<div class="empty">还没有灵感。想到什么就写一句，回车就存下来。</div>';
+    document.getElementById('n-idea').textContent = DB.ideas.length;
+  }
+
+  // ═══════════ 渲染：倒计时 ═══════════
+  function renderCounts(){
+    var list = DB.counts.slice().sort(function(a,b){
+      if(a.date && b.date && a.date!==b.date) return a.date<b.date ? -1 : 1;
+      return a.ts-b.ts;
+    });
+    var today = todayStr();
+    var html = list.map(function(it){
+      var left = it.date ? daysBetween(today, it.date) : null;
+      var past = left !== null && left < 0;
+      var total = (it.date && it.created) ? daysBetween(it.created, it.date) : 0;
+      var passed = (it.date && it.created) ? daysBetween(it.created, today) : 0;
+      var pct = total > 0 ? Math.min(100, Math.max(0, Math.round(passed/total*100))) : 0;
+
+      var big;
+      if(left === null) big = '<span class="big">—</span><span class="u">天</span>';
+      else if(left > 0) big = '<span class="big">'+left+'</span><span class="u">天</span>';
+      else if(left === 0) big = '<span class="big">今天</span>';
+      else big = '<span class="big">'+Math.abs(left)+'</span><span class="u">天前</span>';
+
+      return '<div class="note count'+(past?' past':'')+'" data-id="'+it.id+'" data-type="count">'
+           +   '<div class="note-txt">'+esc(it.title)+'</div>'
+           +   '<div class="cd-num'+(past?' over':'')+'">'+big+'</div>'
+           +   '<div class="bar"><i style="width:'+pct+'%"></i></div>'
+           +   '<div class="note-meta"><span>'+(it.date ? it.date+' · 还有'+Math.max(0,left)+'天' : '没选日期')+'</span>'
+           +     '<span class="acts">'
+           +       '<button data-act="edit" aria-label="改">改</button>'
+           +       '<button data-act="del" aria-label="删">×</button>'
+           +     '</span></div>'
+           + '</div>';
+    }).join('');
+    document.getElementById('countList').innerHTML =
+      html || '<div class="empty">还没有倒计时。写个名字、选个日期，就自动算还剩几天。</div>';
+    document.getElementById('n-count').textContent = DB.counts.length;
+  }
+
+  // ═══════════ 渲染：待办 ═══════════
+  function renderTodos(){
+    var undone = DB.todos.filter(function(t){ return !t.done; });
+    var done = DB.todos.filter(function(t){ return t.done; });
+    function card(t){
+      return '<div class="note todo" data-id="'+t.id+'" data-type="todo">'
+           +   '<div class="note-txt'+(t.done?' done':'')+'">'+esc(t.text)+'</div>'
+           +   '<div class="note-meta"><span>'+(t.done?'已完成':'未完成')+'</span>'
+           +     '<span class="acts">'
+           +       '<button data-act="toggle" aria-label="勾选">'+(t.done?'撤销':'✓')+'</button>'
+           +       '<button data-act="del" aria-label="删">×</button>'
+           +     '</span></div>'
+           + '</div>';
+    }
+    var html = undone.map(card).join('') + done.map(card).join('');
+    document.getElementById('todoList').innerHTML =
+      html || '<div class="empty">还没有待办。写一句要做的事就行。</div>';
+    document.getElementById('n-todo').textContent = undone.length;
+  }
+
+  function renderAll(){
+    renderIdeas(); renderCounts(); renderTodos();
+    var tabs = document.querySelectorAll('.tab');
+    for(var i=0;i<tabs.length;i++){
+      tabs[i].classList.toggle('on', tabs[i].getAttribute('data-tab')===DB.tab);
+    }
+    document.getElementById('panel-idea').style.display  = DB.tab==='idea'  ? '' : 'none';
+    document.getElementById('panel-count').style.display = DB.tab==='count' ? '' : 'none';
+    document.getElementById('panel-todo').style.display  = DB.tab==='todo'  ? '' : 'none';
+  }
+
+  // ═══════════ 增删改 ═══════════
+  function addIdea(){
+    var el = document.getElementById('ideaInput');
+    var v = el.value.trim();
+    if(!v){ el.focus(); return; }
+    DB.ideas.push({ id: Date.now(), text: v, ts: Date.now() });
+    el.value = '';
+    save(); renderAll(); el.focus();
+  }
+  document.getElementById('ideaAdd').onclick = addIdea;
+  document.getElementById('ideaInput').addEventListener('keydown', function(e){
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); addIdea(); }
+  });
+
+  function addCount(){
+    var t = document.getElementById('countTitle');
+    var d = document.getElementById('countDate');
+    var v = t.value.trim();
+    if(!v){ t.focus(); return; }
+    if(!d.value){ d.focus(); return; }
+    DB.counts.push({ id: Date.now(), title: v, date: d.value, created: todayStr(), ts: Date.now() });
+    t.value=''; d.value='';
+    save(); renderAll(); t.focus();
+  }
+  document.getElementById('countAdd').onclick = addCount;
+  document.getElementById('countTitle').addEventListener('keydown', function(e){
+    if(e.key==='Enter'){ e.preventDefault(); addCount(); }
+  });
+
+  function addTodo(){
+    var el = document.getElementById('todoInput');
+    var v = el.value.trim();
+    if(!v){ el.focus(); return; }
+    DB.todos.push({ id: Date.now(), text: v, done: false, ts: Date.now() });
+    el.value='';
+    save(); renderAll(); el.focus();
+  }
+  document.getElementById('todoAdd').onclick = addTodo;
+  document.getElementById('todoInput').addEventListener('keydown', function(e){
+    if(e.key==='Enter'){ e.preventDefault(); addTodo(); }
+  });
+
+  function findItem(type, id){
+    var arr = type==='idea' ? DB.ideas : type==='count' ? DB.counts : DB.todos;
+    for(var i=0;i<arr.length;i++){ if(arr[i].id===id) return { arr:arr, i:i, it:arr[i] }; }
+    return null;
+  }
+
+  function onCardClick(e){
+    var card = e.target.closest ? e.target.closest('.note') : null;
+    if(!card) return;
+    var btn = e.target.closest('[data-act]');
+    if(!btn) return;
+    var act = btn.getAttribute('data-act');
+    var type = card.getAttribute('data-type');
+    var id = +card.getAttribute('data-id');
+    var f = findItem(type, id);
+    if(!f) return;
+    var it = f.it;
+
+    if(type==='todo' && act==='toggle'){
+      it.done = !it.done; save(); renderAll(); return;
+    }
+    if(act==='del'){
+      var label = it.text || it.title || '';
+      if(window.confirm('确定删掉「'+label+'」？删了不会回来。')){
+        f.arr.splice(f.i, 1); save(); renderAll();
+      }
+      return;
+    }
+    if(act==='edit'){
+      if(type==='idea'){
+        var v = window.prompt('改这条灵感：', it.text);
+        if(v!==null && v.trim()){ it.text = v.trim(); save(); renderAll(); }
+      }else{
+        var t2 = window.prompt('改名字：', it.title);
+        if(t2===null || !t2.trim()) return;
+        var d2 = window.prompt('改日期（格式 2026-12-12）：', it.date || '');
+        if(d2===null) return;
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(d2.trim())){
+          window.alert('日期格式不对，要像 2026-12-12 这样。'); return;
+        }
+        it.title = t2.trim(); it.date = d2.trim();
+        save(); renderAll();
+      }
+    }
+  }
+  document.getElementById('ideaList').addEventListener('click', onCardClick);
+  document.getElementById('countList').addEventListener('click', onCardClick);
+  document.getElementById('todoList').addEventListener('click', onCardClick);
+
+  document.getElementById('tabs').addEventListener('click', function(e){
+    var b = e.target.closest('.tab');
+    if(!b) return;
+    DB.tab = b.getAttribute('data-tab');
+    closeIo();
+    save(); renderAll();
+  });
+
+  // 顶部「备份」面板：和三个标签页放在一起
+  function openIo(v){
+    var p = document.getElementById('ioPanel');
+    var btn = document.getElementById('ioBtn');
+    p.style.display = v ? '' : 'none';
+    btn.classList.toggle('on', !!v);
+  }
+  function closeIo(){ openIo(false); }
+  document.getElementById('ioBtn').addEventListener('click', function(){
+    var p = document.getElementById('ioPanel');
+    openIo(p.style.display === 'none');
+  });
+
+  // ═══════════ 导出 / 导入 ═══════════
+  function download(name, text, mime){
+    var blob = new Blob([text], { type: mime || 'application/json;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+  }
+
+  document.getElementById('exJson').onclick = function(){
+    download('小记备份-'+todayStr()+'.json', JSON.stringify(DB, null, 2));
+  };
+
+  document.getElementById('exCsv').onclick = function(){
+    var rows = [['类型','内容','日期','状态','创建时间']];
+    DB.ideas.forEach(function(x){ rows.push(['灵感', x.text, '', '', stamp(x.ts)]); });
+    DB.counts.forEach(function(x){ rows.push(['倒计时', x.title, x.date||'', '还剩'+Math.max(0, daysBetween(todayStr(), x.date||todayStr()))+'天', stamp(x.ts)]); });
+    DB.todos.forEach(function(x){ rows.push(['待办', x.text, '', x.done?'已完成':'未完成', stamp(x.ts)]); });
+    var csv = rows.map(function(r){
+      return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(',');
+    }).join('\r\n');
+    download('小记清单-'+todayStr()+'.csv', '\ufeff'+csv, 'text/csv;charset=utf-8');
+  };
+
+  var fileEl = document.getElementById('imFile');
+  document.getElementById('imBtn').onclick = function(){ fileEl.click(); };
+  fileEl.onchange = function(){
+    var f = fileEl.files && fileEl.files[0];
+    if(!f) return;
+    var r = new FileReader();
+    r.onload = function(){
+      try{
+        var o = JSON.parse(r.result);
+        if(!o || !Array.isArray(o.ideas)) throw 0;
+        if(!window.confirm('导入会覆盖现在的内容。确定？')) return;
+        DB = { tab: o.tab || 'idea', ideas: o.ideas || [], counts: o.counts || [], todos: o.todos || [] };
+        save(); renderAll();
+        window.alert('导入完成：灵感 '+DB.ideas.length+' 条，倒计时 '+DB.counts.length+' 条，待办 '+DB.todos.length+' 条。');
+      }catch(e){ window.alert('这个文件读不了，可能不是本应用导出的备份。'); }
+    };
+    r.readAsText(f, 'utf-8');
+    fileEl.value = '';
+  };
+
+  // ═══════════ 启动 ═══════════
+  load();
+
+  // 第一次打开预置一条四级，方便看懂用法（可删）
+  if(DB.counts.length===0 && DB.todos.length===0 && DB.ideas.length===0){
+    DB.counts.push({ id: Date.now(), title: '考四级', date: '2026-12-12', created: todayStr(), ts: Date.now() });
+    save();
+  }
+
+  tick(); renderAll();
+  setInterval(tick, 20000);
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden){ tick(); renderAll(); }
+  });
+
+  if('serviceWorker' in navigator && location.protocol==='https:'){
+    try{ navigator.serviceWorker.register('./sw.js'); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>
