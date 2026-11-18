@@ -1,7 +1,7 @@
 // 小记 · 离线缓存
 // 注意：改了图标或应用名之后，必须把 CACHE 改成新名字，
 // 否则浏览器会一直用旧缓存里的 manifest 和图标。
-const CACHE = 'xiaojii-v3';
+const CACHE = 'xiaojii-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-180.png'];
 
 self.addEventListener('install', function (e) {
@@ -11,6 +11,10 @@ self.addEventListener('install', function (e) {
       return c.addAll(ASSETS).catch(function () {});
     })
   );
+});
+
+self.addEventListener('message', function(e){
+  if(e.data && e.data.type === 'SKIP_WAITING'){ self.skipWaiting(); }
 });
 
 self.addEventListener('activate', function (e) {
