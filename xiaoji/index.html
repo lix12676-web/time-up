@@ -93,6 +93,27 @@
 
   .empty{grid-column:1/-1;background:#fff;border-radius:14px;padding:22px 16px;text-align:center;color:var(--ink3);font-size:14.5px;box-shadow:0 2px 10px rgba(20,30,45,.05);}
 
+  /* 就地编辑：不弹任何框，直接在卡片上改 */
+  .note.editing{padding:12px;}
+  .note.editing::before{width:4px;}
+  .edit-input{
+    width:100%;font:inherit;font-size:15.5px;line-height:1.55;padding:9px 11px;border-radius:10px;
+    border:1px solid var(--line);background:#fbfcfd;color:inherit;resize:none;min-height:78px;
+  }
+  .edit-input:focus{outline:none;border-color:#a8b0bb;background:#fff;}
+  .edit-title,.edit-date{
+    width:100%;font:inherit;font-size:15.5px;padding:9px 11px;border-radius:10px;
+    border:1px solid var(--line);background:#fbfcfd;color:inherit;margin-bottom:8px;min-height:42px;
+  }
+  .edit-title:focus,.edit-date:focus{outline:none;border-color:#a8b0bb;background:#fff;}
+  .edit-acts{display:flex;gap:8px;margin-top:10px;}
+  .edit-acts button{
+    flex:1;min-height:40px;border-radius:10px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;
+    border:1px solid var(--line);background:#f2f4f7;color:var(--ink2);
+  }
+  .edit-acts button.on{border-color:var(--ink);background:var(--ink);color:#fff;}
+  .edit-acts button.danger{border-color:#c2410c;background:#c2410c;color:#fff;}
+
   details{background:#fff;border-radius:14px;padding:12px 14px;margin-top:18px;box-shadow:0 2px 10px rgba(20,30,45,.05);}
   summary{font-size:14.5px;font-weight:600;cursor:pointer;color:var(--ink2);}
   .io{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
@@ -152,6 +173,8 @@
     .empty{background:#181c22;}
     .sheet-acts button{background:#20252d;border-color:#2a313a;color:var(--ink2);}
     .sheet-field input,.sheet-field textarea{background:#20252d;border-color:#2a313a;}
+    .edit-input,.edit-title,.edit-date{background:#20252d;border-color:#2a313a;}
+    .edit-acts button{background:#20252d;border-color:#2a313a;}
   }
 </style>
 </head>
@@ -159,7 +182,7 @@
 <main>
   <div class="head">
     <div class="clock" id="clock"></div>
-    <div class="ver">v2.0.5</div>
+    <div class="ver">v2.1.0</div>
   </div>
 
   <div class="tabs" id="tabs">
@@ -244,6 +267,8 @@
   var OLDKEY = 'timeup.v2';
   var MS = 86400000;
   var DB = { tab:'idea', ideas:[], counts:[], todos:[] };
+  var editing = { type:null, id:null };
+  function isEditing(type, id){ return editing.type === type && editing.id === id; }
 
   function pad(n){ return n<10 ? '0'+n : ''+n; }
   function todayStr(){
@@ -305,6 +330,15 @@
   function renderIdeas(){
     var list = DB.ideas.slice().sort(function(a,b){ return b.ts-a.ts; });
     var html = list.map(function(it){
+      if(isEditing('idea', it.id)){
+        return '<div class="note idea editing" data-id="'+it.id+'" data-type="idea">'
+             +   '<textarea class="edit-input">'+esc(it.text)+'</textarea>'
+             +   '<div class="edit-acts">'
+             +     '<button data-act="cancel">取消</button>'
+             +     '<button data-act="save" class="on">保存</button>'
+             +   '</div>'
+             + '</div>';
+      }
       return '<div class="note idea" data-id="'+it.id+'" data-type="idea">'
            +   '<div class="note-txt">'+esc(it.text)+'</div>'
            +   '<div class="note-meta"><span>'+stamp(it.ts)+'</span>'
@@ -327,6 +361,16 @@
     });
     var today = todayStr();
     var html = list.map(function(it){
+      if(isEditing('count', it.id)){
+        return '<div class="note count editing" data-id="'+it.id+'" data-type="count">'
+             +   '<input class="edit-title" type="text" value="'+esc(it.title)+'" placeholder="名称，比如 考四级">'
+             +   '<input class="edit-date" type="date" value="'+(it.date||'')+'">'
+             +   '<div class="edit-acts">'
+             +     '<button data-act="cancel">取消</button>'
+             +     '<button data-act="save" class="on">保存</button>'
+             +   '</div>'
+             + '</div>';
+      }
       var left = it.date ? daysBetween(today, it.date) : null;
       var past = left !== null && left < 0;
       var total = (it.date && it.created) ? daysBetween(it.created, it.date) : 0;
@@ -360,6 +404,15 @@
     var undone = DB.todos.filter(function(t){ return !t.done; });
     var done = DB.todos.filter(function(t){ return t.done; });
     function card(t){
+      if(isEditing('todo', t.id)){
+        return '<div class="note todo editing" data-id="'+t.id+'" data-type="todo">'
+             +   '<textarea class="edit-input">'+esc(t.text)+'</textarea>'
+             +   '<div class="edit-acts">'
+             +     '<button data-act="cancel">取消</button>'
+             +     '<button data-act="save" class="on">保存</button>'
+             +   '</div>'
+             + '</div>';
+      }
       return '<div class="note todo" data-id="'+t.id+'" data-type="todo">'
            +   '<div class="note-txt'+(t.done?' done':'')+'">'+esc(t.text)+'</div>'
            +   '<div class="note-meta"><span>'+(t.done?'已完成':'未完成')+'</span>'
@@ -551,6 +604,41 @@
     if(type==='todo' && act==='toggle'){
       it.done = !it.done; save(); renderAll(); return;
     }
+
+    // 就地编辑：卡片原地变成输入框，不弹任何东西
+    if(act==='edit'){
+      editing = { type: type, id: id };
+      renderAll();
+      focusEdit(type, id);
+      return;
+    }
+    if(act==='cancel'){
+      editing = { type: null, id: null };
+      renderAll();
+      return;
+    }
+    if(act==='save'){
+      if(type==='count'){
+        var elT = card.querySelector('.edit-title');
+        var elD = card.querySelector('.edit-date');
+        var nv = ((elT && elT.value) || '').trim();
+        var nd = ((elD && elD.value) || '').trim();
+        if(!nv || !/^\d{4}-\d{2}-\d{2}$/.test(nd)){
+          openSheet({ title:'再检查一下', msg:'名称不能空，日期要选完整（年、月、日）。', okText:'知道了' });
+          return;
+        }
+        it.title = nv; it.date = nd;
+      }else{
+        var elX = card.querySelector('.edit-input');
+        var nv2 = ((elX && elX.value) || '').trim();
+        if(!nv2){ return; }
+        it.text = nv2;
+      }
+      editing = { type: null, id: null };
+      save(); renderAll();
+      return;
+    }
+
     if(act==='del'){
       var label = it.text || it.title || '';
       openSheet({
@@ -561,38 +649,20 @@
       });
       return;
     }
-    if(act==='edit'){
-      if(type==='idea'){
-        openSheet({
-          title:'修改灵感',
-          fields:[{ key:'text', type:'textarea', value:it.text, rows:3 }],
-          okText:'保存',
-          onOk:function(v){
-            var t = (v.text || '').trim();
-            if(!t) return;
-            it.text = t; save(); renderAll();
-          }
-        });
-      }else{
-        openSheet({
-          title:'修改倒计时',
-          fields:[
-            { key:'title', type:'text', label:'名称', value:it.title, placeholder:'考四级' },
-            { key:'date', type:'date', label:'日期', value:it.date }
-          ],
-          okText:'保存',
-          onOk:function(v){
-            var t = (v.title || '').trim();
-            var d = (v.date || '').trim();
-            if(!t || !/^\d{4}-\d{2}-\d{2}$/.test(d)){
-              openSheet({ title:'再检查一下', msg:'名称不能空，日期要选完整（年份、月、日）。', okText:'知道了' });
-              return;
-            }
-            it.title = t; it.date = d; save(); renderAll();
-          }
-        });
+  }
+
+  function focusEdit(type, id){
+    setTimeout(function(){
+      var card = document.querySelector('.note.editing[data-id="' + id + '"]');
+      if(!card) return;
+      var inp = card.querySelector('.edit-input') || card.querySelector('.edit-title');
+      if(!inp) return;
+      inp.focus();
+      if(inp.tagName === 'TEXTAREA'){
+        var len = inp.value.length;
+        try{ inp.setSelectionRange(len, len); }catch(err){}
       }
-    }
+    }, 40);
   }
   document.getElementById('ideaList').addEventListener('click', onCardClick);
   document.getElementById('countList').addEventListener('click', onCardClick);
@@ -602,6 +672,7 @@
     var b = e.target.closest('.tab');
     if(!b) return;
     DB.tab = b.getAttribute('data-tab');
+    editing = { type:null, id:null };
     closeIo();
     save(); renderAll();
   });
