@@ -29,15 +29,24 @@
   .clock b{color:var(--ink2);font-weight:600;}
   .ver{font-size:11.5px;color:#aab2bd;letter-spacing:.04em;border:1px solid var(--line);border-radius:99px;padding:1px 8px;background:#fff;}
 
-  .tabs{display:flex;gap:6px;background:#eceef2;border-radius:14px;padding:4px;margin-bottom:14px;}
+  .tabs{display:flex;gap:4px;background:#eceef2;border-radius:14px;padding:4px;margin-bottom:10px;align-items:stretch;}
   .tab{
-    flex:1;min-height:44px;border:0;background:transparent;border-radius:11px;
+    flex:1;min-width:0;min-height:44px;border:0;background:transparent;border-radius:11px;
     font:inherit;font-size:15px;font-weight:600;color:var(--ink2);cursor:pointer;
-    display:flex;align-items:center;justify-content:center;gap:6px;
+    display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;
   }
   .tab.on{background:#fff;color:var(--ink);box-shadow:0 1px 5px rgba(20,30,45,.10);}
   .tab .n{font-size:12px;background:#dfe3ea;color:#6b7480;border-radius:99px;padding:0 6px;line-height:1.7;font-weight:600;}
   .tab.on .n{background:#eef3fb;color:#2b5c9e;}
+  .tool{
+    flex:0 0 auto;min-height:44px;padding:0 14px;border:0;border-radius:11px;background:transparent;
+    font:inherit;font-size:14px;font-weight:600;color:var(--ink2);cursor:pointer;white-space:nowrap;
+    display:flex;align-items:center;justify-content:center;gap:5px;
+    border-left:1px solid #dde1e8;
+  }
+  .tool.on{background:#fff;color:var(--ink);box-shadow:0 1px 5px rgba(20,30,45,.10);border-left-color:transparent;}
+
+  .io-panel{background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:12px;box-shadow:0 2px 10px rgba(20,30,45,.06);}
 
   .add{background:#fff;border-radius:16px;padding:12px;box-shadow:0 2px 10px rgba(20,30,45,.06);margin-bottom:14px;}
   .add-line{display:flex;gap:8px;align-items:flex-start;}
@@ -95,7 +104,7 @@
     :root{--bg:#0f1216;--card:#181c22;--ink:#e9edf2;--ink2:#c2c9d2;--ink3:#8b939e;--line:#2a313a;}
     .tabs{background:#1b2027;}
     .tab.on{background:#2a313a;color:#fff;}
-    .add,details{background:var(--card);}
+    .add,.io-panel{background:var(--card);}
     textarea,input[type=text],input[type=date]{background:#20252d;border-color:#2a313a;}
     .ver{background:#181c22;}
     .empty{background:#181c22;}
@@ -106,13 +115,24 @@
 <main>
   <div class="head">
     <div class="clock" id="clock"></div>
-    <div class="ver">v2.0</div>
+    <div class="ver">v2.0.1</div>
   </div>
 
   <div class="tabs" id="tabs">
     <button class="tab on" data-tab="idea">灵感<span class="n" id="n-idea">0</span></button>
     <button class="tab" data-tab="count">倒计时<span class="n" id="n-count">0</span></button>
     <button class="tab" data-tab="todo">待办<span class="n" id="n-todo">0</span></button>
+    <button class="tool" id="ioBtn" type="button">备份</button>
+  </div>
+
+  <div class="io-panel" id="ioPanel" style="display:none;">
+    <div class="io" style="margin-top:0;">
+      <button id="exJson">导出备份（JSON）</button>
+      <button id="exCsv">导出表格（CSV）</button>
+      <button id="imBtn" type="button">导入备份</button>
+      <input type="file" id="imFile" accept=".json,application/json" style="display:none">
+    </div>
+    <div class="tip">数据只存在这台设备的浏览器里，不上传。换手机前先导出，新设备再导入。清缓存、换浏览器会丢。</div>
   </div>
 
   <section id="panel-idea">
@@ -149,17 +169,6 @@
     </div>
     <div class="grid" id="todoList"></div>
   </section>
-
-  <details>
-    <summary>备份 / 导出 / 换设备</summary>
-    <div class="io">
-      <button id="exJson">导出备份（JSON）</button>
-      <button id="exCsv">导出表格（CSV）</button>
-      <button id="imBtn" type="button">导入备份</button>
-      <input type="file" id="imFile" accept=".json,application/json" style="display:none">
-    </div>
-    <div class="tip">数据只存在这台设备的浏览器里，不上传。换手机前先导出，新设备再导入。清缓存、换浏览器会丢。</div>
-  </details>
 
   <footer>三格 · 灵感 / 倒计时 / 待办 &nbsp;·&nbsp; 数据存本地 &nbsp;·&nbsp; 版本说明见 README</footer>
 </main>
@@ -411,7 +420,21 @@
     var b = e.target.closest('.tab');
     if(!b) return;
     DB.tab = b.getAttribute('data-tab');
+    closeIo();
     save(); renderAll();
+  });
+
+  // 顶部「备份」面板：和三个标签页放在一起
+  function openIo(v){
+    var p = document.getElementById('ioPanel');
+    var btn = document.getElementById('ioBtn');
+    p.style.display = v ? '' : 'none';
+    btn.classList.toggle('on', !!v);
+  }
+  function closeIo(){ openIo(false); }
+  document.getElementById('ioBtn').addEventListener('click', function(){
+    var p = document.getElementById('ioPanel');
+    openIo(p.style.display === 'none');
   });
 
   // ═══════════ 导出 / 导入 ═══════════
