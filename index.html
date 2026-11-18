@@ -1,161 +1,678 @@
-# 小记 · 灵感 / 倒计时 / 待办
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="小记">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>小记 · 灵感 / 倒计时 / 待办</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#ffffff; --ink:#1b2027; --ink2:#5b6472; --ink3:#8b939e;
+    --line:#e6e9ee; --idea:#2b5c9e; --count:#c2410c; --todo:#146c52;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    font-size:16px;line-height:1.6;-webkit-text-size-adjust:100%;
+  }
+  main{max-width:880px;margin:0 auto;padding:16px 14px 40px;}
 
-一个单文件的网页应用：三个标签页，装灵感、装倒计时、装待办。
-数据全部存在使用者自己的设备里（浏览器 localStorage），不上传任何服务器。
+  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .clock{font-size:13.5px;color:var(--ink3);font-variant-numeric:tabular-nums;line-height:1.6;}
+  .clock b{color:var(--ink2);font-weight:600;}
+  .ver{font-size:11.5px;color:#aab2bd;letter-spacing:.04em;border:1px solid var(--line);border-radius:99px;padding:1px 8px;background:#fff;}
 
-- **在线地址**：https://lix12676-web.github.io/time-up/
-- **本地文件**：`index.html`（双击即可打开，无需装任何东西）
-- **当前版本**：v2.0.0（2026-11-18）
+  .tabs{display:flex;gap:4px;background:#eceef2;border-radius:14px;padding:4px;margin-bottom:10px;align-items:stretch;}
+  .tab{
+    flex:1;min-width:0;min-height:44px;border:0;background:transparent;border-radius:11px;
+    font:inherit;font-size:15px;font-weight:600;color:var(--ink2);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;
+  }
+  .tab.on{background:#fff;color:var(--ink);box-shadow:0 1px 5px rgba(20,30,45,.10);}
+  .tab .n{font-size:12px;background:#dfe3ea;color:#6b7480;border-radius:99px;padding:0 6px;line-height:1.7;font-weight:600;}
+  .tab.on .n{background:#eef3fb;color:#2b5c9e;}
+  .tool{
+    flex:0 0 auto;min-height:44px;padding:0 14px;border:0;border-radius:11px;background:transparent;
+    font:inherit;font-size:14px;font-weight:600;color:var(--ink2);cursor:pointer;white-space:nowrap;
+    display:flex;align-items:center;justify-content:center;gap:5px;
+    border-left:1px solid #dde1e8;
+  }
+  .tool.on{background:#fff;color:var(--ink);box-shadow:0 1px 5px rgba(20,30,45,.10);border-left-color:transparent;}
 
----
+  .io-panel{background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:12px;box-shadow:0 2px 10px rgba(20,30,45,.06);}
 
-## 一、这个应用干什么
+  .add{background:#fff;border-radius:16px;padding:12px;box-shadow:0 2px 10px rgba(20,30,45,.06);margin-bottom:14px;}
+  .add-line{display:flex;gap:8px;align-items:flex-start;}
+  textarea,input[type=text]{
+    flex:1;min-width:0;font:inherit;font-size:16px;padding:10px 12px;border-radius:11px;
+    border:1px solid var(--line);background:#fbfcfd;color:inherit;line-height:1.5;resize:none;
+  }
+  textarea{min-height:46px;}
+  textarea:focus,input:focus{outline:none;border-color:#a8b0bb;background:#fff;}
+  .add-go{flex:0 0 auto;min-height:46px;padding:0 16px;border-radius:11px;border:1px solid var(--ink);background:var(--ink);color:#fff;font:inherit;font-size:15px;cursor:pointer;}
+  .add-sub{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center;}
+  input[type=date]{font:inherit;font-size:14.5px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fbfcfd;color:inherit;min-height:42px;}
+  .hint{font-size:12.5px;color:var(--ink3);}
 
-| 板块 | 用来记什么 | 每条卡片上有什么 |
-|---|---|---|
-| 灵感 | 随手想到的一句话、一个点子 | 内容、记录时间、改、删 |
-| 倒计时 | 有明确日子的事（考四级、交论文、体检） | 名字、目标日期、**还剩几天**、进度条、改、删 |
-| 待办 | 要做但没有具体日子的事 | 内容、未完成/已完成、勾选、删 |
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;}
+  .note{
+    position:relative;background:var(--card);border-radius:14px;padding:13px 13px 11px 15px;
+    box-shadow:0 2px 10px rgba(20,30,45,.06);overflow:hidden;
+    display:flex;flex-direction:column;min-height:100px;
+  }
+  .note::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,var(--idea));}
+  .note.idea{--c:var(--idea);}
+  .note.count{--c:var(--count);}
+  .note.todo{--c:var(--todo);}
+  .note.past{--c:#aab2bd;}
 
-时间轴上的"还剩几天"是**实时算的**：改了系统日期或过了一天，重新打开就自动变，不需要手动维护。
+  .note-txt{font-size:15.5px;line-height:1.55;font-weight:500;word-break:break-word;white-space:pre-wrap;flex:1;}
+  .note-txt.done{color:#a3abb6;text-decoration:line-through;font-weight:400;}
+  .note-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:9px;font-size:12.5px;color:var(--ink3);}
+  .acts{display:flex;gap:2px;margin:-6px -8px -6px 0;}
+  .acts button{
+    width:36px;height:36px;border:0;background:transparent;color:#c0c7d1;font-size:15px;
+    line-height:1;cursor:pointer;border-radius:9px;padding:0;
+  }
+  .acts button:active{background:#f0f2f6;}
 
----
+  .cd-num{display:flex;align-items:baseline;gap:5px;margin:6px 0 0;}
+  .cd-num span.big{font-size:32px;font-weight:700;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--count);}
+  .cd-num span.u{font-size:14px;color:var(--ink2);}
+  .cd-num.over span.big{color:#aab2bd;}
+  .bar{height:6px;border-radius:99px;background:#eceff4;margin:10px 0 0;overflow:hidden;}
+  .bar i{display:block;height:6px;border-radius:99px;background:var(--count);}
+  .note.past .bar i{background:#c7ccd4;}
 
-## 二、怎么用（使用者视角）
+  .empty{grid-column:1/-1;background:#fff;border-radius:14px;padding:22px 16px;text-align:center;color:var(--ink3);font-size:14.5px;box-shadow:0 2px 10px rgba(20,30,45,.05);}
 
-1. 手机 Chrome 打开在线地址 → 右上 ⋮ → **安装应用**，桌面会出现独立图标，点开全屏、没有地址栏。
-2. 打开后默认在"灵感"页，直接写，**回车就保存**（Shift + 回车才是换行）。
-3. 切到"倒计时"，写名字 + 选日期 + 点"加上"，卡片立刻显示还剩多少天。
-4. 切到"待办"，写一句就能加，点 ✓ 变已完成，会沉到列表后面。
-5. 换手机：底部"备份 / 导出 / 换设备" → 导出备份（JSON）→ 新设备点导入，选那个文件。
+  details{background:#fff;border-radius:14px;padding:12px 14px;margin-top:18px;box-shadow:0 2px 10px rgba(20,30,45,.05);}
+  summary{font-size:14.5px;font-weight:600;cursor:pointer;color:var(--ink2);}
+  .io{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .io button{font:inherit;font-size:14px;min-height:42px;padding:0 14px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:11px;cursor:pointer;}
+  .tip{font-size:12.5px;color:var(--ink3);line-height:1.75;margin-top:9px;}
+  footer{font-size:12px;color:#aab2bd;line-height:1.8;margin-top:18px;text-align:center;}
 
----
+  /* ── 应用内弹层（替代浏览器自带的 prompt / confirm 丑框） ── */
+  .sheet-wrap{position:fixed;inset:0;z-index:60;display:none;}
+  .sheet-wrap.on{display:block;}
+  .sheet-bg{position:absolute;inset:0;background:rgba(16,19,24,.32);}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;background:var(--card);
+    border-radius:20px 20px 0 0;padding:8px 18px calc(14px + env(safe-area-inset-bottom));
+    box-shadow:0 -8px 26px rgba(0,0,0,.16);animation:sheetUp .2s cubic-bezier(.2,.8,.2,1);
+    max-height:72vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  }
+  @keyframes sheetUp{from{transform:translateY(16px);opacity:.55}to{transform:none;opacity:1}}
+  @media (min-width:600px){
+    .sheet{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);
+      width:400px;border-radius:16px;padding:18px 20px 16px;animation:sheetIn .16s ease-out;max-height:80vh;}
+    @keyframes sheetIn{from{opacity:0}to{opacity:1}}
+    .handle{display:none;}
+  }
+  .handle{width:38px;height:4px;border-radius:99px;background:#d3d8df;margin:2px auto 10px;}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+  .sheet-title{font-size:15.5px;font-weight:700;margin:0;color:var(--ink);letter-spacing:.01em;}
+  .sheet-x{
+    flex:0 0 auto;width:32px;height:32px;border:0;background:#f1f3f6;border-radius:9px;
+    color:var(--ink3);font-size:17px;line-height:1;cursor:pointer;padding:0;
+  }
+  .sheet-field{margin-bottom:10px;}
+  .sheet-field label{display:block;font-size:12px;color:var(--ink3);margin-bottom:4px;font-weight:600;letter-spacing:.02em;}
+  .sheet-field input,.sheet-field textarea{
+    width:100%;font:inherit;font-size:16px;padding:10px 12px;border-radius:11px;
+    border:1px solid var(--line);background:#fbfcfd;color:inherit;line-height:1.55;resize:none;
+  }
+  .sheet-field textarea{min-height:62px;max-height:26vh;}
+  .sheet-field input:focus,.sheet-field textarea:focus{outline:none;border-color:#a8b0bb;background:#fff;}
+  .sheet-msg{font-size:14px;color:var(--ink2);line-height:1.7;word-break:break-word;}
+  .sheet-acts{display:flex;gap:8px;margin-top:14px;}
+  .sheet-acts button{
+    flex:1;min-height:44px;border-radius:12px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;
+    border:1px solid var(--line);background:#f2f4f7;color:var(--ink2);
+  }
+  .sheet-acts button:active{transform:scale(.985);}
+  .sheet-ok{border:1px solid var(--ink)!important;background:var(--ink)!important;color:#fff!important;}
+  .sheet-ok.danger{border-color:#c2410c!important;background:#c2410c!important;}
 
-## 三、文件结构
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#0f1216;--card:#181c22;--ink:#e9edf2;--ink2:#c2c9d2;--ink3:#8b939e;--line:#2a313a;}
+    .tabs{background:#1b2027;}
+    .tab.on{background:#2a313a;color:#fff;}
+    .add,.io-panel{background:var(--card);}
+    textarea,input[type=text],input[type=date]{background:#20252d;border-color:#2a313a;}
+    .ver{background:#181c22;}
+    .empty{background:#181c22;}
+    .sheet-acts button{background:#20252d;border-color:#2a313a;color:var(--ink2);}
+    .sheet-field input,.sheet-field textarea{background:#20252d;border-color:#2a313a;}
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="head">
+    <div class="clock" id="clock"></div>
+    <div class="ver">v2.0.4</div>
+  </div>
 
-```
-time-up/
-├── index.html      ← 整个应用（HTML + CSS + JS 全在这一个文件里）
-├── manifest.json   ← PWA 清单：应用名、图标、全屏方式
-├── sw.js           ← 离线缓存（页面导航网络优先，静态资源缓存优先）
-├── icon-192.png    ← 小图标
-├── icon-512.png    ← 大图标
-├── icon-180.png    ← iOS 桌面图标
-└── README.md       ← 本文档
-```
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-tab="idea">灵感<span class="n" id="n-idea">0</span></button>
+    <button class="tab" data-tab="count">倒计时<span class="n" id="n-count">0</span></button>
+    <button class="tab" data-tab="todo">待办<span class="n" id="n-todo">0</span></button>
+    <button class="tool" id="ioBtn" type="button">备份</button>
+  </div>
 
-**没有构建步骤**：不依赖 React / Vue / 任何 npm 包，改完 `index.html` 直接上传就生效。
+  <div class="io-panel" id="ioPanel" style="display:none;">
+    <div class="io" style="margin-top:0;">
+      <button id="exJson">导出备份（JSON）</button>
+      <button id="exCsv">导出表格（CSV）</button>
+      <button id="imBtn" type="button">导入备份</button>
+      <input type="file" id="imFile" accept=".json,application/json" style="display:none">
+    </div>
+    <div class="tip">数据只存在这台设备的浏览器里，不上传。换手机前先导出，新设备再导入。清缓存、换浏览器会丢。</div>
+  </div>
 
----
+  <section id="panel-idea">
+    <div class="add">
+      <div class="add-line">
+        <textarea id="ideaInput" placeholder="想到什么就写下来，回车保存"></textarea>
+        <button class="add-go" id="ideaAdd">记下</button>
+      </div>
+      <div class="add-sub"><span class="hint">Shift + 回车可以换行</span></div>
+    </div>
+    <div class="grid" id="ideaList"></div>
+  </section>
 
-## 四、数据结构（localStorage）
+  <section id="panel-count" style="display:none;">
+    <div class="add">
+      <div class="add-line">
+        <input type="text" id="countTitle" placeholder="要考的事，比如 考四级" autocomplete="off">
+        <button class="add-go" id="countAdd">加上</button>
+      </div>
+      <div class="add-sub">
+        <input type="date" id="countDate">
+        <span class="hint">选日期就能自动算还剩多少天</span>
+      </div>
+    </div>
+    <div class="grid" id="countList"></div>
+  </section>
 
-存储 key：`shige.v2`
+  <section id="panel-todo" style="display:none;">
+    <div class="add">
+      <div class="add-line">
+        <input type="text" id="todoInput" placeholder="要做的事，比如 交作业" autocomplete="off">
+        <button class="add-go" id="todoAdd">加上</button>
+      </div>
+    </div>
+    <div class="grid" id="todoList"></div>
+  </section>
 
-```json
-{
-  "tab": "idea | count | todo",
-  "ideas":  [ { "id": 1700000000000, "text": "一句话灵感", "ts": 1700000000000 } ],
-  "counts": [ { "id": 1700000000000, "title": "考四级", "date": "2026-12-12",
-               "created": "2026-11-18", "ts": 1700000000000 } ],
-  "todos":  [ { "id": 1700000000000, "text": "交作业", "done": false, "ts": 1700000000000 } ]
-}
-```
+  <footer>小记 · 灵感 / 倒计时 / 待办 &nbsp;·&nbsp; 数据存本地 &nbsp;·&nbsp; 版本说明见 README</footer>
+</main>
 
-字段说明：
+<!-- ===== 应用内弹层 ===== -->
+<div class="sheet-wrap" id="sheetWrap">
+  <div class="sheet-bg" id="sheetBg"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true">
+    <div class="handle"></div>
+    <div class="sheet-head">
+      <div class="sheet-title" id="sheetTitle"></div>
+      <button type="button" class="sheet-x" id="sheetX" aria-label="关闭">×</button>
+    </div>
+    <div id="sheetBody"></div>
+    <div class="sheet-acts">
+      <button type="button" id="sheetCancel">取消</button>
+      <button type="button" id="sheetOk" class="sheet-ok">确定</button>
+    </div>
+  </div>
+</div>
 
-- `id`：毫秒时间戳，同时当唯一键用。
-- `ts`：创建时间（毫秒），用于排序和卡片上显示"11月18日 19:12"。
-- `counts[].date`：目标日期，格式必须是 `YYYY-MM-DD`；`created` 是创建那天，用来算进度条百分比。
-- 旧版本（time-up v1，key = `timeup.v2`）的待办会在首次加载时自动迁移过来。
+<script>
+(function(){
+  'use strict';
 
-**改数据结构时必须同时改三处**：`load()` 的兜底、`renderXxx()` 的读取、导出/导入的分支。
+  // ═══════════ 数据层：全部存在 localStorage ═══════════
+  // key = shige.v2 ，结构见 README.md
+  var KEY = 'shige.v2';
+  var OLDKEY = 'timeup.v2';
+  var MS = 86400000;
+  var DB = { tab:'idea', ideas:[], counts:[], todos:[] };
 
----
+  function pad(n){ return n<10 ? '0'+n : ''+n; }
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  }
+  function dayStart(s){
+    var a = s.split('-');
+    return new Date(+a[0], +a[1]-1, +a[2]).getTime();
+  }
+  function daysBetween(a, b){ return Math.round((dayStart(b)-dayStart(a))/MS); }
+  function stamp(ts){
+    var d = new Date(ts);
+    return (d.getMonth()+1)+'月'+d.getDate()+'日 '+pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+  function esc(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
 
-## 五、想改东西，改哪一段
+  function load(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      if(raw){
+        var o = JSON.parse(raw);
+        if(o && o.ideas){ DB = o; }
+      }else{
+        var old = localStorage.getItem(OLDKEY);
+        if(old){
+          var ov = JSON.parse(old);
+          if(ov && ov.todos){
+            DB.todos = ov.todos.map(function(t, i){
+              return { id: t.id || (Date.now()+i), text: t.text || '', done: !!t.done, ts: t.id || Date.now() };
+            });
+          }
+        }
+      }
+    }catch(e){}
+    if(!DB.tab) DB.tab = 'idea';
+    if(!DB.ideas) DB.ideas = [];
+    if(!DB.counts) DB.counts = [];
+    if(!DB.todos) DB.todos = [];
+  }
+  function save(){
+    try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){}
+  }
 
-`index.html` 里所有逻辑都在一个 `<script>` 里，按注释分隔成块，搜这些关键词就能定位：
+  // ═══════════ 时钟 ═══════════
+  var WK = ['日','一','二','三','四','五','六'];
+  function tick(){
+    var d = new Date();
+    var el = document.getElementById('clock');
+    if(el){
+      el.innerHTML = d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+WK[d.getDay()]
+                   + ' <b>'+pad(d.getHours())+':'+pad(d.getMinutes())+'</b>';
+    }
+  }
 
-| 想改什么 | 搜这个 | 说明 |
-|---|---|---|
-| 存哪个 key（版本换名） | `var KEY = 'shige.v2'` | 改名等于清空旧数据，谨慎 |
-| 顶部日期时间格式 | `function tick()` | 现在是"2026年11月18日 星期三 19:12" |
-| 灵感卡片长什么样 | `function renderIdeas()` | 卡片 HTML 模板 |
-| 倒计时怎么算天数 | `function renderCounts()` 里的 `daysBetween` | 按自然日算，不看时分 |
-| 待办排序 | `function renderTodos()` | 未完成在前，已完成在后 |
-| 三个板块的颜色 | `<style>` 顶部 `:root` 的 `--idea` `--count` `--todo` | 卡片左侧色条、倒计时数字都用它 |
-| 加/删/改的确认弹窗 | `function onCardClick()` | 删除有 `confirm` 二次确认 |
-| 导出的 CSV 列 | `exCsv` 的 `onclick` | 五列：类型、内容、日期、状态、创建时间 |
-| 首次打开预置的示例 | 启动段 `if(DB.counts.length===0 ...)` | 目前预置一条"考四级 2026-12-12"，可删掉这段 |
+  // ═══════════ 渲染：灵感 ═══════════
+  function renderIdeas(){
+    var list = DB.ideas.slice().sort(function(a,b){ return b.ts-a.ts; });
+    var html = list.map(function(it){
+      return '<div class="note idea" data-id="'+it.id+'" data-type="idea">'
+           +   '<div class="note-txt">'+esc(it.text)+'</div>'
+           +   '<div class="note-meta"><span>'+stamp(it.ts)+'</span>'
+           +     '<span class="acts">'
+           +       '<button data-act="edit" aria-label="改">改</button>'
+           +       '<button data-act="del" aria-label="删">×</button>'
+           +     '</span></div>'
+           + '</div>';
+    }).join('');
+    document.getElementById('ideaList').innerHTML =
+      html || '<div class="empty">还没有灵感。想到什么就写一句，回车就存下来。</div>';
+    document.getElementById('n-idea').textContent = DB.ideas.length;
+  }
 
----
+  // ═══════════ 渲染：倒计时 ═══════════
+  function renderCounts(){
+    var list = DB.counts.slice().sort(function(a,b){
+      if(a.date && b.date && a.date!==b.date) return a.date<b.date ? -1 : 1;
+      return a.ts-b.ts;
+    });
+    var today = todayStr();
+    var html = list.map(function(it){
+      var left = it.date ? daysBetween(today, it.date) : null;
+      var past = left !== null && left < 0;
+      var total = (it.date && it.created) ? daysBetween(it.created, it.date) : 0;
+      var passed = (it.date && it.created) ? daysBetween(it.created, today) : 0;
+      var pct = total > 0 ? Math.min(100, Math.max(0, Math.round(passed/total*100))) : 0;
 
-## 六、本地怎么看效果
+      var big;
+      if(left === null) big = '<span class="big">—</span><span class="u">天</span>';
+      else if(left > 0) big = '<span class="big">'+left+'</span><span class="u">天</span>';
+      else if(left === 0) big = '<span class="big">今天</span>';
+      else big = '<span class="big">'+Math.abs(left)+'</span><span class="u">天前</span>';
 
-直接用浏览器打开 `index.html` 就行（`file://` 也能跑，只是离线缓存和"安装应用"不会生效，那是 https 才有的能力）。
+      return '<div class="note count'+(past?' past':'')+'" data-id="'+it.id+'" data-type="count">'
+           +   '<div class="note-txt">'+esc(it.title)+'</div>'
+           +   '<div class="cd-num'+(past?' over':'')+'">'+big+'</div>'
+           +   '<div class="bar"><i style="width:'+pct+'%"></i></div>'
+           +   '<div class="note-meta"><span>'+(it.date ? it.date+' · 还有'+Math.max(0,left)+'天' : '没选日期')+'</span>'
+           +     '<span class="acts">'
+           +       '<button data-act="edit" aria-label="改">改</button>'
+           +       '<button data-act="del" aria-label="删">×</button>'
+           +     '</span></div>'
+           + '</div>';
+    }).join('');
+    document.getElementById('countList').innerHTML =
+      html || '<div class="empty">还没有倒计时。写个名字、选个日期，就自动算还剩几天。</div>';
+    document.getElementById('n-count').textContent = DB.counts.length;
+  }
 
-想用手机看效果，最省事是把它推到 GitHub，用 Pages 地址访问。
+  // ═══════════ 渲染：待办 ═══════════
+  function renderTodos(){
+    var undone = DB.todos.filter(function(t){ return !t.done; });
+    var done = DB.todos.filter(function(t){ return t.done; });
+    function card(t){
+      return '<div class="note todo" data-id="'+t.id+'" data-type="todo">'
+           +   '<div class="note-txt'+(t.done?' done':'')+'">'+esc(t.text)+'</div>'
+           +   '<div class="note-meta"><span>'+(t.done?'已完成':'未完成')+'</span>'
+           +     '<span class="acts">'
+           +       '<button data-act="toggle" aria-label="勾选">'+(t.done?'撤销':'✓')+'</button>'
+           +       '<button data-act="del" aria-label="删">×</button>'
+           +     '</span></div>'
+           + '</div>';
+    }
+    var html = undone.map(card).join('') + done.map(card).join('');
+    document.getElementById('todoList').innerHTML =
+      html || '<div class="empty">还没有待办。写一句要做的事就行。</div>';
+    document.getElementById('n-todo').textContent = undone.length;
+  }
 
----
+  function renderAll(){
+    renderIdeas(); renderCounts(); renderTodos();
+    var tabs = document.querySelectorAll('.tab');
+    for(var i=0;i<tabs.length;i++){
+      tabs[i].classList.toggle('on', tabs[i].getAttribute('data-tab')===DB.tab);
+    }
+    document.getElementById('panel-idea').style.display  = DB.tab==='idea'  ? '' : 'none';
+    document.getElementById('panel-count').style.display = DB.tab==='count' ? '' : 'none';
+    document.getElementById('panel-todo').style.display  = DB.tab==='todo'  ? '' : 'none';
+  }
 
-## 七、部署
+  // ═══════════ 增删改 ═══════════
+  function addIdea(){
+    var el = document.getElementById('ideaInput');
+    var v = el.value.trim();
+    if(!v){ el.focus(); return; }
+    DB.ideas.push({ id: Date.now(), text: v, ts: Date.now() });
+    el.value = '';
+    save(); renderAll(); el.focus();
+  }
+  document.getElementById('ideaAdd').onclick = addIdea;
+  document.getElementById('ideaInput').addEventListener('keydown', function(e){
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); addIdea(); }
+  });
 
-这仓库开了 GitHub Pages，分支 `main`、根目录。
+  function addCount(){
+    var t = document.getElementById('countTitle');
+    var d = document.getElementById('countDate');
+    var v = t.value.trim();
+    if(!v){ t.focus(); return; }
+    if(!d.value){ d.focus(); return; }
+    DB.counts.push({ id: Date.now(), title: v, date: d.value, created: todayStr(), ts: Date.now() });
+    t.value=''; d.value='';
+    save(); renderAll(); t.focus();
+  }
+  document.getElementById('countAdd').onclick = addCount;
+  document.getElementById('countTitle').addEventListener('keydown', function(e){
+    if(e.key==='Enter'){ e.preventDefault(); addCount(); }
+  });
 
-- 改 `index.html` → 提交到 `main` → 等 1 分钟左右，Pages 自动重新构建。
-- 注意：`sw.js` 有缓存，改完页面后**手机上可能要下拉刷新一次**或关掉重开才会更新；如果彻底不更新，把 `sw.js` 里的 `CACHE = 'timeup-v1'` 改成 `v2` 之类的版本名。
+  function addTodo(){
+    var el = document.getElementById('todoInput');
+    var v = el.value.trim();
+    if(!v){ el.focus(); return; }
+    DB.todos.push({ id: Date.now(), text: v, done: false, ts: Date.now() });
+    el.value='';
+    save(); renderAll(); el.focus();
+  }
+  document.getElementById('todoAdd').onclick = addTodo;
+  document.getElementById('todoInput').addEventListener('keydown', function(e){
+    if(e.key==='Enter'){ e.preventDefault(); addTodo(); }
+  });
 
----
+  function findItem(type, id){
+    var arr = type==='idea' ? DB.ideas : type==='count' ? DB.counts : DB.todos;
+    for(var i=0;i<arr.length;i++){ if(arr[i].id===id) return { arr:arr, i:i, it:arr[i] }; }
+    return null;
+  }
 
-## 八、版本历史
+  // ═══════════ 应用内弹层（替代浏览器自带的 prompt / confirm） ═══════════
+  var sheetWrap = document.getElementById('sheetWrap');
+  var sheetTitleEl = document.getElementById('sheetTitle');
+  var sheetBodyEl = document.getElementById('sheetBody');
+  var sheetOkEl = document.getElementById('sheetOk');
+  var sheetCancelEl = document.getElementById('sheetCancel');
+  var sheetInputs = [];
+  var sheetCb = null;
 
-### v2.0.3 · 2026-11-18
-- **去掉浏览器自带的弹框**：修改、删除、导入确认、导入结果、日期报错，全部换成应用内自绘的底部弹层（`openSheet` / `closeSheet`）。
-- 弹层在手机上是底部抽屉、电脑上是居中卡片；带遮罩、点遮罩关闭、Esc 关闭；单行输入回车即确定。
-- 删除按钮为橙色警示样式，不会再出现 `lix12676-web.github.io 显示` 这种浏览器痕迹。
+  function closeSheet(){
+    sheetWrap.classList.remove('on');
+    sheetBodyEl.innerHTML = '';
+    sheetInputs = [];
+    sheetCb = null;
+  }
 
-### v2.0.2 · 2026-11-18
-- **应用改名**：三格 → **小记**（`manifest.json` 的 `name` / `short_name`、页面标题、页脚同步）。
-- **换图标**：从原来的柱状图改成「便签 + 橙色对勾」，`icon-512/192/180.png` 全部重画。
-- 已经装到桌面的用户，名字和图标属于安装时写进系统的，需要**卸载后重装一次**才会变；页面内容则刷新即生效。
+  // opts = { title, msg, fields:[{key,label,type:'text'|'date'|'textarea',value,placeholder,rows}], okText, danger, onOk(values) }
+  function openSheet(opts){
+    sheetTitleEl.textContent = opts.title || '';
+    sheetBodyEl.innerHTML = '';
+    sheetInputs = [];
 
-### v2.0.1 · 2026-11-18
-- **备份 / 导出入口从页面底部移到顶部**：和「灵感 / 倒计时 / 待办」三个标签放在同一行，右侧多一个「备份」按钮，点开才展开三个按钮（导出 JSON / 导出 CSV / 导入备份）。
-- 切到任意标签页时，备份面板自动收起。
-- 页面底部不再有折叠区，滚动更短。
+    if(opts.msg){
+      var d = document.createElement('div');
+      d.className = 'sheet-msg';
+      d.textContent = opts.msg;
+      sheetBodyEl.appendChild(d);
+    }
 
-### v2.0.0 · 2026-11-18
-- 整体重写，从"时间倒计时页"改成**三板块**结构：灵感 / 倒计时 / 待办。
-- 三个板块用顶部标签页切换，每条记录都是一张独立便签卡片。
-- 卡片改为自适应网格：手机单列，电脑自动两列或三列。
-- 倒计时支持自定义名字 + 日期，实时算"还剩 X 天"，多了进度条。
-- 每条都支持改、删；删除有二次确认。
-- 新增 CSV 导出（Excel 可直接打开）。
-- 数据 key 从 `timeup.v2` 升级为 `shige.v2`，旧待办自动迁移。
-- 去掉 v1 里写死的三条倒计时和"体检"区块。
+    (opts.fields || []).forEach(function(f){
+      var wrap = document.createElement('div');
+      wrap.className = 'sheet-field';
+      if(f.label){
+        var lb = document.createElement('label');
+        lb.textContent = f.label;
+        wrap.appendChild(lb);
+      }
+      var el;
+      if(f.type === 'textarea'){ el = document.createElement('textarea'); el.rows = f.rows || 4; }
+      else if(f.type === 'date'){ el = document.createElement('input'); el.type = 'date'; }
+      else { el = document.createElement('input'); el.type = 'text'; el.setAttribute('autocomplete','off'); }
+      el.value = f.value || '';
+      if(f.placeholder) el.placeholder = f.placeholder;
+      el.addEventListener('keydown', function(ev){
+        if(ev.key === 'Enter' && f.type !== 'textarea'){ ev.preventDefault(); sheetOkEl.click(); }
+      });
+      wrap.appendChild(el);
+      sheetBodyEl.appendChild(wrap);
+      sheetInputs.push({ key: f.key, el: el });
+      el.addEventListener('focus', function(){
+        setTimeout(function(){
+          if(el.scrollIntoView) el.scrollIntoView({ block:'nearest' });
+        }, 260);
+      });
+    });
 
-### v1.x · 2026-11-18
-- 第一版：写死的三条倒计时（四级/期末/秋招）、简单待办、体检提醒。
-- 已被 v2 取代。
+    sheetOkEl.textContent = opts.okText || '确定';
+    sheetOkEl.className = 'sheet-ok' + (opts.danger ? ' danger' : '');
+    sheetCancelEl.style.display = (opts.msg && !opts.fields) ? 'none' : '';
+    sheetCb = opts.onOk || null;
 
----
+    sheetWrap.classList.add('on');
+    setTimeout(function(){
+      var first = sheetBodyEl.querySelector('input,textarea');
+      if(first) first.focus();
+    }, 80);
+  }
 
-## 九、已知限制（别当成 bug）
+  sheetOkEl.onclick = function(){
+    var vals = {};
+    sheetInputs.forEach(function(x){ vals[x.key] = x.el.value; });
+    var cb = sheetCb;
+    closeSheet();
+    if(cb) cb(vals);
+  };
+  sheetCancelEl.onclick = closeSheet;
+  document.getElementById('sheetX').onclick = closeSheet;
+  document.getElementById('sheetBg').onclick = closeSheet;
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeSheet(); });
 
-1. **不能主动推送通知**。网页关掉后不会弹提醒；真要提醒得靠外部定时任务。PWA 加通知权限在 Android 可行、iOS 基本不行。
-2. **数据只在本机**。换设备、换浏览器、清缓存都会丢，必须靠导出/导入。
-3. **没有云同步**。要多人或多设备实时同步，得加后端账号系统，那是另一个量级的工程。
-4. **没有安装包（APK）**。这是 PWA，靠浏览器"安装应用"生成桌面图标；要 APK 需要 Android 构建环境另外打包。
-5. 日期一律按"自然日"算，不精确到时分。
+  function onCardClick(e){
+    var card = e.target.closest ? e.target.closest('.note') : null;
+    if(!card) return;
+    var btn = e.target.closest('[data-act]');
+    if(!btn) return;
+    var act = btn.getAttribute('data-act');
+    var type = card.getAttribute('data-type');
+    var id = +card.getAttribute('data-id');
+    var f = findItem(type, id);
+    if(!f) return;
+    var it = f.it;
 
----
+    if(type==='todo' && act==='toggle'){
+      it.done = !it.done; save(); renderAll(); return;
+    }
+    if(act==='del'){
+      var label = it.text || it.title || '';
+      openSheet({
+        title:'删除这一条？',
+        msg:'「' + label + '」删掉就找不回来了。',
+        okText:'删除', danger:true,
+        onOk:function(){ f.arr.splice(f.i, 1); save(); renderAll(); }
+      });
+      return;
+    }
+    if(act==='edit'){
+      if(type==='idea'){
+        openSheet({
+          title:'修改灵感',
+          fields:[{ key:'text', type:'textarea', value:it.text, rows:3 }],
+          okText:'保存',
+          onOk:function(v){
+            var t = (v.text || '').trim();
+            if(!t) return;
+            it.text = t; save(); renderAll();
+          }
+        });
+      }else{
+        openSheet({
+          title:'修改倒计时',
+          fields:[
+            { key:'title', type:'text', label:'名称', value:it.title, placeholder:'考四级' },
+            { key:'date', type:'date', label:'日期', value:it.date }
+          ],
+          okText:'保存',
+          onOk:function(v){
+            var t = (v.title || '').trim();
+            var d = (v.date || '').trim();
+            if(!t || !/^\d{4}-\d{2}-\d{2}$/.test(d)){
+              openSheet({ title:'再检查一下', msg:'名称不能空，日期要选完整（年份、月、日）。', okText:'知道了' });
+              return;
+            }
+            it.title = t; it.date = d; save(); renderAll();
+          }
+        });
+      }
+    }
+  }
+  document.getElementById('ideaList').addEventListener('click', onCardClick);
+  document.getElementById('countList').addEventListener('click', onCardClick);
+  document.getElementById('todoList').addEventListener('click', onCardClick);
 
-## 十、给接手的人 / 另一个 AI 的提示
+  document.getElementById('tabs').addEventListener('click', function(e){
+    var b = e.target.closest('.tab');
+    if(!b) return;
+    DB.tab = b.getAttribute('data-tab');
+    closeIo();
+    save(); renderAll();
+  });
 
-1. 先读这份 README 的第四、第五节，再看 `index.html` 的 `<script>`，结构是：数据层 → 渲染层 → 事件层 → 导入导出 → 启动。
-2. 修改前先备份：把 `index.html` 复制成 `index-vX.html` 放同目录（不会被 Pages 影响，只是留档）。
-3. 改动渲染函数后，务必核对 **空列表状态**（`.empty` 那段）和**已完成/已过期状态**，这两个最容易漏。
-4. 任何时候不要改动 `KEY = 'shige.v2'` 除非有意清空用户数据；要升级结构就写迁移逻辑，像现在迁移 `timeup.v2` 那样。
-5. 卡片模板里所有用户输入都必须过 `esc()`，防止 HTML 注入。
-6. 手机端点击区不小于 44px，现在标签页和按钮按这个尺寸做的，别改小。
+  // 顶部「备份」面板：和三个标签页放在一起
+  function openIo(v){
+    var p = document.getElementById('ioPanel');
+    var btn = document.getElementById('ioBtn');
+    p.style.display = v ? '' : 'none';
+    btn.classList.toggle('on', !!v);
+  }
+  function closeIo(){ openIo(false); }
+  document.getElementById('ioBtn').addEventListener('click', function(){
+    var p = document.getElementById('ioPanel');
+    openIo(p.style.display === 'none');
+  });
+
+  // ═══════════ 导出 / 导入 ═══════════
+  function download(name, text, mime){
+    var blob = new Blob([text], { type: mime || 'application/json;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+  }
+
+  document.getElementById('exJson').onclick = function(){
+    download('小记备份-'+todayStr()+'.json', JSON.stringify(DB, null, 2));
+  };
+
+  document.getElementById('exCsv').onclick = function(){
+    var rows = [['类型','内容','日期','状态','创建时间']];
+    DB.ideas.forEach(function(x){ rows.push(['灵感', x.text, '', '', stamp(x.ts)]); });
+    DB.counts.forEach(function(x){ rows.push(['倒计时', x.title, x.date||'', '还剩'+Math.max(0, daysBetween(todayStr(), x.date||todayStr()))+'天', stamp(x.ts)]); });
+    DB.todos.forEach(function(x){ rows.push(['待办', x.text, '', x.done?'已完成':'未完成', stamp(x.ts)]); });
+    var csv = rows.map(function(r){
+      return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(',');
+    }).join('\r\n');
+    download('小记清单-'+todayStr()+'.csv', '\ufeff'+csv, 'text/csv;charset=utf-8');
+  };
+
+  var fileEl = document.getElementById('imFile');
+  document.getElementById('imBtn').onclick = function(){ fileEl.click(); };
+  fileEl.onchange = function(){
+    var f = fileEl.files && fileEl.files[0];
+    if(!f) return;
+    var r = new FileReader();
+    r.onload = function(){
+      try{
+        var o = JSON.parse(r.result);
+        if(!o || !Array.isArray(o.ideas)) throw 0;
+        openSheet({
+          title:'导入备份',
+          msg:'会覆盖现在的内容：灵感 ' + (o.ideas||[]).length + ' 条、倒计时 ' + (o.counts||[]).length + ' 条、待办 ' + (o.todos||[]).length + ' 条。原来的记录将被替换。',
+          okText:'覆盖导入', danger:true,
+          onOk:function(){
+            DB = { tab: o.tab || 'idea', ideas: o.ideas || [], counts: o.counts || [], todos: o.todos || [] };
+            save(); renderAll();
+            openSheet({
+              title:'导入完成',
+              msg:'灵感 ' + DB.ideas.length + ' 条，倒计时 ' + DB.counts.length + ' 条，待办 ' + DB.todos.length + ' 条。',
+              okText:'好'
+            });
+          }
+        });
+      }catch(e){
+        openSheet({ title:'文件读不了', msg:'这可能不是「小记」导出的备份文件。', okText:'知道了' });
+      }
+    };
+    r.readAsText(f, 'utf-8');
+    fileEl.value = '';
+  };
+
+  // ═══════════ 启动 ═══════════
+  load();
+
+  // 第一次打开预置一条四级，方便看懂用法（可删）
+  if(DB.counts.length===0 && DB.todos.length===0 && DB.ideas.length===0){
+    DB.counts.push({ id: Date.now(), title: '考四级', date: '2026-12-12', created: todayStr(), ts: Date.now() });
+    save();
+  }
+
+  tick(); renderAll();
+  setInterval(tick, 20000);
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden){ tick(); renderAll(); }
+  });
+
+  if('serviceWorker' in navigator && location.protocol==='https:'){
+    try{ navigator.serviceWorker.register('./sw.js'); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>
