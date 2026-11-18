@@ -100,6 +100,40 @@
   .tip{font-size:12.5px;color:var(--ink3);line-height:1.75;margin-top:9px;}
   footer{font-size:12px;color:#aab2bd;line-height:1.8;margin-top:18px;text-align:center;}
 
+  /* ── 应用内弹层（替代浏览器自带的 prompt / confirm 丑框） ── */
+  .sheet-wrap{position:fixed;inset:0;z-index:60;display:none;}
+  .sheet-wrap.on{display:block;}
+  .sheet-bg{position:absolute;inset:0;background:rgba(16,19,24,.46);}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;background:var(--card);
+    border-radius:22px 22px 0 0;padding:20px 18px calc(18px + env(safe-area-inset-bottom));
+    box-shadow:0 -10px 34px rgba(0,0,0,.20);animation:sheetUp .22s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes sheetUp{from{transform:translateY(18px);opacity:.5}to{transform:none;opacity:1}}
+  @media (min-width:600px){
+    .sheet{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);
+      width:420px;border-radius:18px;padding:22px 20px 18px;animation:sheetIn .16s ease-out;}
+    @keyframes sheetIn{from{opacity:0}to{opacity:1}}
+  }
+  .sheet-title{font-size:15.5px;font-weight:700;margin:0 0 14px;color:var(--ink);letter-spacing:.01em;}
+  .sheet-field{margin-bottom:12px;}
+  .sheet-field label{display:block;font-size:12.5px;color:var(--ink3);margin-bottom:5px;font-weight:600;letter-spacing:.02em;}
+  .sheet-field input,.sheet-field textarea{
+    width:100%;font:inherit;font-size:16px;padding:11px 12px;border-radius:11px;
+    border:1px solid var(--line);background:#fbfcfd;color:inherit;line-height:1.5;resize:none;
+  }
+  .sheet-field textarea{min-height:92px;}
+  .sheet-field input:focus,.sheet-field textarea:focus{outline:none;border-color:#a8b0bb;background:#fff;}
+  .sheet-msg{font-size:14.5px;color:var(--ink2);line-height:1.75;word-break:break-word;}
+  .sheet-acts{display:flex;gap:10px;margin-top:18px;}
+  .sheet-acts button{
+    flex:1;min-height:47px;border-radius:13px;font:inherit;font-size:15.5px;font-weight:600;cursor:pointer;
+    border:1px solid var(--line);background:#f2f4f7;color:var(--ink2);
+  }
+  .sheet-acts button:active{transform:scale(.985);}
+  .sheet-ok{border:1px solid var(--ink)!important;background:var(--ink)!important;color:#fff!important;}
+  .sheet-ok.danger{border-color:#c2410c!important;background:#c2410c!important;}
+
   @media (prefers-color-scheme:dark){
     :root{--bg:#0f1216;--card:#181c22;--ink:#e9edf2;--ink2:#c2c9d2;--ink3:#8b939e;--line:#2a313a;}
     .tabs{background:#1b2027;}
@@ -108,6 +142,8 @@
     textarea,input[type=text],input[type=date]{background:#20252d;border-color:#2a313a;}
     .ver{background:#181c22;}
     .empty{background:#181c22;}
+    .sheet-acts button{background:#20252d;border-color:#2a313a;color:var(--ink2);}
+    .sheet-field input,.sheet-field textarea{background:#20252d;border-color:#2a313a;}
   }
 </style>
 </head>
@@ -115,7 +151,7 @@
 <main>
   <div class="head">
     <div class="clock" id="clock"></div>
-    <div class="ver">v2.0.2</div>
+    <div class="ver">v2.0.3</div>
   </div>
 
   <div class="tabs" id="tabs">
@@ -172,6 +208,19 @@
 
   <footer>小记 · 灵感 / 倒计时 / 待办 &nbsp;·&nbsp; 数据存本地 &nbsp;·&nbsp; 版本说明见 README</footer>
 </main>
+
+<!-- ===== 应用内弹层 ===== -->
+<div class="sheet-wrap" id="sheetWrap">
+  <div class="sheet-bg" id="sheetBg"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-title" id="sheetTitle"></div>
+    <div id="sheetBody"></div>
+    <div class="sheet-acts">
+      <button type="button" id="sheetCancel">取消</button>
+      <button type="button" id="sheetOk" class="sheet-ok">确定</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -373,6 +422,80 @@
     return null;
   }
 
+  // ═══════════ 应用内弹层（替代浏览器自带的 prompt / confirm） ═══════════
+  var sheetWrap = document.getElementById('sheetWrap');
+  var sheetTitleEl = document.getElementById('sheetTitle');
+  var sheetBodyEl = document.getElementById('sheetBody');
+  var sheetOkEl = document.getElementById('sheetOk');
+  var sheetCancelEl = document.getElementById('sheetCancel');
+  var sheetInputs = [];
+  var sheetCb = null;
+
+  function closeSheet(){
+    sheetWrap.classList.remove('on');
+    sheetBodyEl.innerHTML = '';
+    sheetInputs = [];
+    sheetCb = null;
+  }
+
+  // opts = { title, msg, fields:[{key,label,type:'text'|'date'|'textarea',value,placeholder,rows}], okText, danger, onOk(values) }
+  function openSheet(opts){
+    sheetTitleEl.textContent = opts.title || '';
+    sheetBodyEl.innerHTML = '';
+    sheetInputs = [];
+
+    if(opts.msg){
+      var d = document.createElement('div');
+      d.className = 'sheet-msg';
+      d.textContent = opts.msg;
+      sheetBodyEl.appendChild(d);
+    }
+
+    (opts.fields || []).forEach(function(f){
+      var wrap = document.createElement('div');
+      wrap.className = 'sheet-field';
+      if(f.label){
+        var lb = document.createElement('label');
+        lb.textContent = f.label;
+        wrap.appendChild(lb);
+      }
+      var el;
+      if(f.type === 'textarea'){ el = document.createElement('textarea'); el.rows = f.rows || 4; }
+      else if(f.type === 'date'){ el = document.createElement('input'); el.type = 'date'; }
+      else { el = document.createElement('input'); el.type = 'text'; el.setAttribute('autocomplete','off'); }
+      el.value = f.value || '';
+      if(f.placeholder) el.placeholder = f.placeholder;
+      el.addEventListener('keydown', function(ev){
+        if(ev.key === 'Enter' && f.type !== 'textarea'){ ev.preventDefault(); sheetOkEl.click(); }
+      });
+      wrap.appendChild(el);
+      sheetBodyEl.appendChild(wrap);
+      sheetInputs.push({ key: f.key, el: el });
+    });
+
+    sheetOkEl.textContent = opts.okText || '确定';
+    sheetOkEl.className = 'sheet-ok' + (opts.danger ? ' danger' : '');
+    sheetCancelEl.style.display = (opts.msg && !opts.fields) ? 'none' : '';
+    sheetCb = opts.onOk || null;
+
+    sheetWrap.classList.add('on');
+    setTimeout(function(){
+      var first = sheetBodyEl.querySelector('input,textarea');
+      if(first) first.focus();
+    }, 80);
+  }
+
+  sheetOkEl.onclick = function(){
+    var vals = {};
+    sheetInputs.forEach(function(x){ vals[x.key] = x.el.value; });
+    var cb = sheetCb;
+    closeSheet();
+    if(cb) cb(vals);
+  };
+  sheetCancelEl.onclick = closeSheet;
+  document.getElementById('sheetBg').onclick = closeSheet;
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeSheet(); });
+
   function onCardClick(e){
     var card = e.target.closest ? e.target.closest('.note') : null;
     if(!card) return;
@@ -390,25 +513,44 @@
     }
     if(act==='del'){
       var label = it.text || it.title || '';
-      if(window.confirm('确定删掉「'+label+'」？删了不会回来。')){
-        f.arr.splice(f.i, 1); save(); renderAll();
-      }
+      openSheet({
+        title:'删除这一条？',
+        msg:'「' + label + '」删掉就找不回来了。',
+        okText:'删除', danger:true,
+        onOk:function(){ f.arr.splice(f.i, 1); save(); renderAll(); }
+      });
       return;
     }
     if(act==='edit'){
       if(type==='idea'){
-        var v = window.prompt('改这条灵感：', it.text);
-        if(v!==null && v.trim()){ it.text = v.trim(); save(); renderAll(); }
+        openSheet({
+          title:'修改灵感',
+          fields:[{ key:'text', type:'textarea', value:it.text, rows:4 }],
+          okText:'保存',
+          onOk:function(v){
+            var t = (v.text || '').trim();
+            if(!t) return;
+            it.text = t; save(); renderAll();
+          }
+        });
       }else{
-        var t2 = window.prompt('改名字：', it.title);
-        if(t2===null || !t2.trim()) return;
-        var d2 = window.prompt('改日期（格式 2026-12-12）：', it.date || '');
-        if(d2===null) return;
-        if(!/^\d{4}-\d{2}-\d{2}$/.test(d2.trim())){
-          window.alert('日期格式不对，要像 2026-12-12 这样。'); return;
-        }
-        it.title = t2.trim(); it.date = d2.trim();
-        save(); renderAll();
+        openSheet({
+          title:'修改倒计时',
+          fields:[
+            { key:'title', type:'text', label:'名称', value:it.title, placeholder:'考四级' },
+            { key:'date', type:'date', label:'日期', value:it.date }
+          ],
+          okText:'保存',
+          onOk:function(v){
+            var t = (v.title || '').trim();
+            var d = (v.date || '').trim();
+            if(!t || !/^\d{4}-\d{2}-\d{2}$/.test(d)){
+              openSheet({ title:'再检查一下', msg:'名称不能空，日期要选完整（年份、月、日）。', okText:'知道了' });
+              return;
+            }
+            it.title = t; it.date = d; save(); renderAll();
+          }
+        });
       }
     }
   }
@@ -472,11 +614,23 @@
       try{
         var o = JSON.parse(r.result);
         if(!o || !Array.isArray(o.ideas)) throw 0;
-        if(!window.confirm('导入会覆盖现在的内容。确定？')) return;
-        DB = { tab: o.tab || 'idea', ideas: o.ideas || [], counts: o.counts || [], todos: o.todos || [] };
-        save(); renderAll();
-        window.alert('导入完成：灵感 '+DB.ideas.length+' 条，倒计时 '+DB.counts.length+' 条，待办 '+DB.todos.length+' 条。');
-      }catch(e){ window.alert('这个文件读不了，可能不是本应用导出的备份。'); }
+        openSheet({
+          title:'导入备份',
+          msg:'会覆盖现在的内容：灵感 ' + (o.ideas||[]).length + ' 条、倒计时 ' + (o.counts||[]).length + ' 条、待办 ' + (o.todos||[]).length + ' 条。原来的记录将被替换。',
+          okText:'覆盖导入', danger:true,
+          onOk:function(){
+            DB = { tab: o.tab || 'idea', ideas: o.ideas || [], counts: o.counts || [], todos: o.todos || [] };
+            save(); renderAll();
+            openSheet({
+              title:'导入完成',
+              msg:'灵感 ' + DB.ideas.length + ' 条，倒计时 ' + DB.counts.length + ' 条，待办 ' + DB.todos.length + ' 条。',
+              okText:'好'
+            });
+          }
+        });
+      }catch(e){
+        openSheet({ title:'文件读不了', msg:'这可能不是「小记」导出的备份文件。', okText:'知道了' });
+      }
     };
     r.readAsText(f, 'utf-8');
     fileEl.value = '';
