@@ -185,7 +185,7 @@
   <div class="topbar">
   <div class="head">
     <div class="clock" id="clock"></div>
-    <div class="ver">v2.1.1</div>
+    <div class="ver">v2.1.2</div>
   </div>
 
   <div class="tabs" id="tabs">
@@ -766,8 +766,29 @@
     if(!document.hidden){ tick(); renderAll(); }
   });
 
-  if('serviceWorker' in navigator && location.protocol==='https:'){
-    try{ navigator.serviceWorker.register('./sw.js'); }catch(e){}
+  // ═══════════ 自动更新：回到前台就检查新版本，装了新版立刻换 ═══════════
+  if('serviceWorker' in navigator && location.protocol === 'https:'){
+    var hadCtrl = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('./sw.js').then(function(reg){
+      function check(){
+        try{ reg.update(); }catch(e){}
+      }
+      document.addEventListener('visibilitychange', function(){
+        if(!document.hidden){ check(); }
+      });
+      setInterval(check, 20 * 60 * 1000);
+      reg.addEventListener('updatefound', function(){
+        var w = reg.installing;
+        if(!w) return;
+        w.addEventListener('statechange', function(){
+          if(w.state === 'installed' && hadCtrl){ w.postMessage({ type:'SKIP_WAITING' }); }
+        });
+      });
+    }).catch(function(){});
+
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(hadCtrl){ location.reload(); }
+    });
   }
 })();
 </script>
